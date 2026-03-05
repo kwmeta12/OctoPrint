@@ -227,6 +227,14 @@ def load_user(id):
         and user.is_active
         and (not sessionid or validate_session_signature(sessionsig, id, sessionid))
     ):
+        # If remote user authentication is enabled, verify the session matches current remote user
+        if settings().getBoolean(["accessControl", "trustRemoteUser"]) and session.get("login_mechanism") == util.LoginMechanism.REMOTE_USER:
+            remote_user_header = request.headers.get(settings().get(["accessControl", "remoteUserHeader"]))
+            if remote_user_header and remote_user_header != id:
+                # Remote user header has changed, invalidate the session
+                session.clear()
+                return None
+        
         return user
 
     return None
